@@ -11,7 +11,7 @@ makes it easy to see what kind of effects one can achieve with it.
 testpattern() = load(joinpath(@__DIR__, "..", "resources", "testpattern.png"))
 
 function use_testpattern()
-    info("No custom image specifed. Using \"testpattern()\" for demonstration.")
+    @info("No custom image specifed. Using \"testpattern()\" for demonstration.")
     testpattern()
 end
 
@@ -37,7 +37,7 @@ end
 @inline maybe_copy(A::Array) = A
 @inline maybe_copy(A::SArray) = A
 @inline maybe_copy(A::MArray) = A
-@inline maybe_copy(A::AbstractArray) = match_idx(collect(A), indices(A))
+@inline maybe_copy(A::AbstractArray) = match_idx(collect(A), axes(A))
 @inline maybe_copy(A::Tuple) = map(maybe_copy, A)
 
 # --------------------------------------------------------------------
@@ -54,19 +54,19 @@ end
 
 @inline plain_indices(A::Array) = A
 @inline plain_indices(A::OffsetArray) = parent(A)
-@inline plain_indices(A::AbstractArray) = _plain_indices(A, indices(A))
-@inline plain_indices(A::SubArray) = _plain_indices(A, A.indexes)
+@inline plain_indices(A::AbstractArray) = _plain_indices(A, axes(A))
+@inline plain_indices(A::SubArray) = _plain_indices(A, A.indices)
 
 @inline function _plain_indices(A::AbstractArray{T,N}, ids::NTuple{N,Base.OneTo}) where {T, N}
     A
 end
 
 @inline function _plain_indices(A::AbstractArray, ids::Tuple{Vararg{Any}})
-    view(A, indices(A)...)
+    view(A, axes(A)...)
 end
 
 @inline function _plain_indices(A::SubArray{T,N}, ids::NTuple{N,IdentityRange}) where {T, N}
-    view(parent(A), indices(A)...)
+    view(parent(A), axes(A)...)
 end
 
 # --------------------------------------------------------------------
@@ -97,18 +97,18 @@ function indirect_indices(O::NTuple{N,AbstractUnitRange}, I::NTuple{N,StepRange}
     map((i1,i2) -> UnitRange(i1)[i2], O, I)
 end
 
-function indirect_indices(O::NTuple{N,StepRange}, I::NTuple{N,Range}) where N
+function indirect_indices(O::NTuple{N,StepRange}, I::NTuple{N,UnitRange}) where N
     map((i1,i2) -> i1[i2], O, I)
 end
 
 # --------------------------------------------------------------------
 
 function indirect_view(A::AbstractArray, I::Tuple)
-    view(A, indirect_indices(indices(A), I)...)
+    view(A, indirect_indices(axes(A), I)...)
 end
 
-function indirect_view(A::SubArray{T,N,TA,<:NTuple{N,Range}}, I::Tuple) where {T,N,TA}
-    view(parent(A), indirect_indices(A.indexes, I)...)
+function indirect_view(A::SubArray{T,N,TA,<:NTuple{N,UnitRange}}, I::Tuple) where {T,N,TA}
+    view(parent(A), indirect_indices(A.indices, I)...)
 end
 
 # --------------------------------------------------------------------
@@ -122,22 +122,22 @@ function direct_indices(O::NTuple{N,IdentityRange}, I::NTuple{N,StepRange}) wher
     throw(MethodError(direct_indices, (O, I)))
 end
 
-@inline function direct_indices(O::NTuple{N,Range}, I::NTuple{N,AbstractUnitRange}) where N
+@inline function direct_indices(O::NTuple{N,UnitRange}, I::NTuple{N,AbstractUnitRange}) where N
     map(IdentityRange, I)
 end
 
-@inline function direct_indices(O::NTuple{N,Range}, I::NTuple{N,StepRange}) where N
+@inline function direct_indices(O::NTuple{N,UnitRange}, I::NTuple{N,StepRange}) where N
     I
 end
 
 # --------------------------------------------------------------------
 
-function direct_view(A::AbstractArray{T,N}, I::NTuple{N,Range}) where {T,N}
-    view(A, direct_indices(indices(A), I)...)
+function direct_view(A::AbstractArray{T,N}, I::NTuple{N,UnitRange}) where {T,N}
+    view(A, direct_indices(axes(A), I)...)
 end
 
-function direct_view(A::SubArray{T,N,TA,<:NTuple{N,Range}}, I::NTuple{N,Range}) where {T,N,TA}
-    view(A, direct_indices(A.indexes, I)...)
+function direct_view(A::SubArray{T,N,TA,<:NTuple{N,UnitRange}}, I::NTuple{N,UnitRange}) where {T,N,TA}
+    view(A, direct_indices(A.indices, I)...)
 end
 
 # --------------------------------------------------------------------
@@ -146,7 +146,7 @@ end
 @inline vectorize(A::Real) = A:A
 
 @inline round_if_float(num::Integer, d) = num
-round_if_float(num::AbstractFloat, d) = round(num,d)
+round_if_float(num::AbstractFloat, d) = round(num; digits=d)
 round_if_float(nums::Tuple, d) = map(num->round_if_float(num,d), nums)
 
 function unionrange(i1::AbstractUnitRange, i2::AbstractUnitRange)

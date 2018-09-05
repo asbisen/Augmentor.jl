@@ -146,7 +146,7 @@ end
         @test @inferred(Augmentor.plain_indices(p)) === view(parent(p), 2:3, 1:2)
     end
     let Aa = Augmentor.prepareaffine(A)
-        @test @inferred(Augmentor.plain_indices(Aa)) === view(Aa, indices(Aa)...)
+        @test @inferred(Augmentor.plain_indices(Aa)) === view(Aa, axes(Aa)...)
     end
     let Ar = reshape(view(A,:,:),1,3,3)
         @test @inferred(Augmentor.plain_indices(Ar)) === Ar
@@ -155,21 +155,21 @@ end
 
 @testset "match_idx" begin
     A = [1 2 3; 4 5 6; 7 8 9]
-    @test @inferred(Augmentor.match_idx(A, indices(A))) === A
+    @test @inferred(Augmentor.match_idx(A, axes(A))) === A
     let img = @inferred Augmentor.match_idx(A, (2:4, 2:4))
-        @test indices(img) === (2:4, 2:4)
+	@test axes(img) === (Base.Slice(2:4), Base.Slice(2:4))
         @test typeof(img) <: OffsetArray
     end
     let B = view(A,1:3,1:3)
-        @test @inferred(Augmentor.match_idx(B, indices(B))) === B
+        @test @inferred(Augmentor.match_idx(B, axes(B))) === B
     end
     let B = view(A,1:3,1:3)
-        img = @inferred(Augmentor.match_idx(B, B.indexes))
-        @test indices(img) === (1:3, 1:3)
+        img = @inferred(Augmentor.match_idx(B, B.indices))
+	@test axes(img) === (Base.Slice(1:3), Base.Slice(1:3))
         @test typeof(img) <: OffsetArray
     end
     let img = @inferred Augmentor.match_idx(view(A,1:3,1:3), (2:4,2:4))
-        @test indices(img) === (2:4, 2:4)
+	@test axes(img) === (Base.Slice(2:4), Base.Slice(2:4))
         @test typeof(img) <: OffsetArray
     end
     let C = Augmentor.prepareaffine(A)
@@ -186,14 +186,14 @@ end
     @test_throws MethodError Augmentor.direct_view(A, ())
     @test @inferred(Augmentor.direct_view(A, (2:3,1:2))) === Av
     @test @inferred(Augmentor.indirect_view(A, (2:3,1:2))) === Av
-    @test @inferred(Augmentor.direct_view(A, (IdentityRange(2:3),IdentityRange(1:2)))) === Av
-    @test @inferred(Augmentor.indirect_view(A, (IdentityRange(2:3),IdentityRange(1:2)))) === Av
+    @test @inferred(Augmentor.direct_view(A, (UnitRange(2:3),UnitRange(1:2)))) === Av
+    @test @inferred(Augmentor.indirect_view(A, (UnitRange(2:3),UnitRange(1:2)))) === Av
     @test @inferred(Augmentor.direct_view(A, (3:-1:2,1:1:2))) === As
     @test @inferred(Augmentor.indirect_view(A, (3:-1:2,1:1:2))) === As
     @test @inferred(Augmentor.direct_view(Av, (3:3,1:2))) === view(Av,3:3,1:2)
     @test @inferred(Augmentor.indirect_view(Av, (2:2,1:2))) === view(Av,3:3,1:2)
-    @test @inferred(Augmentor.direct_view(Av, (IdentityRange(3:3),IdentityRange(1:2)))) === view(Av,3:3,1:2)
-    @test @inferred(Augmentor.indirect_view(Av, (IdentityRange(2:2),IdentityRange(1:2)))) === view(Av,3:3,1:2)
+    @test @inferred(Augmentor.direct_view(Av, (UnitRange(3:3),UnitRange(1:2)))) === view(Av,3:3,1:2)
+    @test @inferred(Augmentor.indirect_view(Av, (UnitRange(2:2),UnitRange(1:2)))) === view(Av,3:3,1:2)
     @test_throws MethodError Augmentor.direct_view(Av, (3:-1:2,2:-1:1))
     @test @inferred(Augmentor.indirect_view(Av, (2:-1:1,2:-1:1))) === view(A,3:-1:2,2:-1:1)
 end
